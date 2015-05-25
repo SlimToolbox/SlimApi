@@ -16,7 +16,7 @@ import importlib.machinery
 import os
 
 
-def get_routes(app_dir=None):
+def get_routes(app_dir=None, app_name=''):
     """get all the routes within the apps director, adding the required
        base urls.
 
@@ -50,6 +50,9 @@ def get_routes(app_dir=None):
             continue
         name = py_file[:-3]
 
+        if app_name and name.lower() != app_name.lower():
+            continue
+
         app = importlib.machinery.SourceFileLoader(
             name, os.path.join(app_dir, py_file)).load_module()
 
@@ -61,4 +64,6 @@ def get_routes(app_dir=None):
             r = list(router)
             r[0] = '/%s/%s' % (name.lower(), router[0].lstrip('/'))
             routers.append(tuple(r))
+        if app_name:  # it was a match, or it we aren't here
+            break
     return routers
