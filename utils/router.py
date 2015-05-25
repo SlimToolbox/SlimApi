@@ -16,8 +16,8 @@ import importlib.machinery
 import os
 
 
-def add_routes(router, app_dir=None):
-    """Add all the routes within the apps director, adding the required
+def get_routes(app_dir=None):
+    """get all the routes within the apps director, adding the required
        base urls.
 
     Each python file in the apps directory is assumed to require a route
@@ -30,19 +30,19 @@ def add_routes(router, app_dir=None):
       A global variable must be created, called app_router.
       To this, an iterable must be set:
         app_router = (
-            ('GET', '/simple', simple),
+            ('path', ExampleHandler),
         )
-      add_routes will detect this, and create an equivilant route as:
-        add_route('GET', '/example/simple', simple)
+      add_routes will detect this, and add it to routers, which is then
+      returned after everything is done.
 
-
-    :param router: router object from the base app
     :param app_dir: defaults to 'apps/' relative to this file
                     the directory to
     """
     app_dir = app_dir or os.path.join(os.path.dirname(
         os.path.dirname(__file__)), 'apps')
     # Don't bother checking here. let it fall through
+
+    routers = []
 
     for py_file in os.listdir(app_dir):
         if (py_file.startswith('_') or not py_file.endswith('.py') or
@@ -56,13 +56,6 @@ def add_routes(router, app_dir=None):
         if not hasattr(app, 'app_router'):
             continue
 
-        app_router = getattr(app, 'app_router')
-        for app_route in app_router:
-            method = app_route[0]
-            path = app_route[1].lstrip('/')
-            handler = app_route[2]
-            _name = app_route[3] if len(app_route) > 3 else None
-            expect_handler = app_route[4] if len(app_route) > 4 else None
-            path = os.path.join('/%s' % name, path)
-            router.add_route(method, path, handler,
-                             name=_name, expect_handler=expect_handler)
+        app_router = getattr(app, 'app_router', [])
+        routers.extend([router for router in app_router])
+    return routers
