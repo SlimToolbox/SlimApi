@@ -57,5 +57,8 @@ def get_routes(app_dir=None):
             continue
 
         app_router = getattr(app, 'app_router', [])
-        routers.extend([router for router in app_router])
+        for router in app_router:
+            r = list(router)
+            r[0] = '/%s/%s' % (name.lower(), router[0].lstrip('/'))
+            routers.append(tuple(r))
     return routers
