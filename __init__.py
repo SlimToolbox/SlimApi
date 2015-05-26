@@ -31,14 +31,16 @@ define("app", default='', help="run a specific app", type=str)
 class Application(tornado.web.Application):
     def __init__(self, handlers=None, **settings):
         if not handlers:
-            handlers = router.get_routes(app_name=options.app)
+            handlers = router.get_routes(__name__, __file__,
+                                         app_name=options.app)
         super(Application, self).__init__(handlers, **settings)
 
 
 def main(args):
     tornado.options.parse_command_line(args)
     http_server = tornado.httpserver.HTTPServer(Application())
-    http_server.listen(options.port)
+    http_server.bind(options.port)
+    http_server.start(0)
     tornado.ioloop.IOLoop.current().start()
 
 if __name__ == '__main__':
