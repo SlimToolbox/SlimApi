@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
+
 import sys
 
 import tornado
@@ -20,6 +22,7 @@ import tornado.ioloop
 import tornado.options
 import tornado.web
 
+from motor import MotorClient
 from tornado.options import define, options
 
 from .utils import router
@@ -38,9 +41,11 @@ class Application(tornado.web.Application):
 
 def main(args):
     tornado.options.parse_command_line(args)
-    http_server = tornado.httpserver.HTTPServer(Application())
+    app = Application()
+    http_server = tornado.httpserver.HTTPServer(app)
     http_server.bind(options.port)
     http_server.start(0)
+    app.settings['db'] = MotorClient()['SlimApi']
     tornado.ioloop.IOLoop.current().start()
 
 if __name__ == '__main__':
