@@ -12,26 +12,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from tornado.web import RequestHandler
+from tornado.web import RequestHandler, Finish, MissingArgumentError
 
 
 class JsonHandler(RequestHandler):
 
-    def success(self, data):
+    def get_argument_or_bail(self, attr):
+        try:
+            return self.get_argument(attr)
+        except MissingArgumentError:
+            self.fail(400, 'Missing %s parameter.' % attr, 1234)
+
+    def success(self, data, bail=True):
         self.finish({
             'status': 'success',
             'data': data
         })
+        if bail:
+            raise Finish()
 
-    def fail(self, status_code, data, code=None):
+    def fail(self, status_code, data, code=None, bail=True):
         self.set_status(status_code)
         self.finish(chunk={
             'status': 'fail',
             'code': code or status_code,
             'data': data,
         })
+        if bail:
+            raise Finish()
 
-    def error(self, status_code, message, data=None, code=None):
+    def error(self, status_code, message, data=None, code=None, bail=True):
         self.set_status(status_code)
         self.finish(chunk={
             'status': 'error',
@@ -39,3 +49,5 @@ class JsonHandler(RequestHandler):
             'message': message,
             'data': data
         })
+        if bail:
+            raise Finish()

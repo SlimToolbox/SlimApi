@@ -14,79 +14,92 @@
 
 from __future__ import absolute_import
 
-import tornado.web
-
 from tornado import gen
 
 from ..utils.handlers import JsonHandler
 
 
-class BaseOTAHandler(JsonHandler):
-    attr = ''
+class BaseHandler(JsonHandler):
+    attrs = ['']
 
     def __init__(self, *args, **kwargs):
-        super(BaseOTAHandler, self).__init__(*args, **kwargs)
+        super(BaseHandler, self).__init__(*args, **kwargs)
         self.collection = self.settings['db']['ota']
 
     @gen.coroutine
-    def get(self, device):
+    def get_device(self, device, bail=True, create=True):
         document = yield self.collection.find_one({'device': device})
         if not document:
-            return self.fail(400, 'Unknown Device.', 1234)
-        val = document.get(self.attr)
-        if not val:
-            return self.fail(404, '%s not set for Device' % self.attr, 1234)
-        return self.success({self.attr: val})
+            if bail:
+                self.fail(400, 'Unknown Device.', 1234)
+            if create:
+                document = {'device': device}
+        return document
+
+    @gen.coroutine
+    def get_device_attrs(self, device, attrs, bail=True):
+        document = yield self.get_device(device)
+        if not document:
+            return
+        vals = []
+        for attr in attrs:
+            val = document.get(attr)
+            if bail and not val:
+                self.fail(404, '%s not set for Device' % attr, 1234)
+            vals.append((attr, val))
+        return vals
+
+    @gen.coroutine
+    def update_device_attrs(self, device, attrs, vals=None, create=True):
+        vals = vals or []
+        if not vals:
+            for attr in attrs:
+                val = self.get_argument_or_bail(attr)
+                vals.append(val)
+        document = yield self.get_device(device, bail=False)
+        for i in range(len(attrs)):
+            attr = attrs[i]
+            val = vals[i]
+            print(attr)
+            if not create and attr in document:
+                self.fail(400, 'Device already has a %s.' % attr, 1234)
+            document[attr] = val
+        yield self.collection.save(document)
+
+    @gen.coroutine
+    def get(self, device):
+        vals = yield self.get_device_attrs(device, self.attrs)
+        self.success(dict(vals))
 
     @gen.coroutine
     def post(self, device):
-        try:
-            val = self.get_argument(self.attr)
-        except tornado.web.MissingArgumentError:
-            return self.fail(400, 'Missing %s parameter.' % self.attr, 1234)
-
-        document = yield self.collection.find_one({'device': device})
-        if document:
-            if hasattr(document, self.attr):
-                return self.fail(400, 'Device already has a %s.' % self.attr,
-                                 1234)
-            _id = document['_id']
-            _ = yield self.collection.update({'_id': _id},
-                                                  {'$set':
-                                                   {self.attr: val}
-                                                   })
-        else:
-            _ = yield self.collection.insert({'device': device,
-                                                   self.attr: val})
-        return self.success('%s added successfully.' % self.attr)
+        yield self.update_device_attrs(device, self.attrs, create=False)
+        self.success('%s added successfully.' % ', '.join(self.attrs))
 
     @gen.coroutine
     def put(self, device):
-        try:
-            val = self.get_argument(self.attr)
-        except tornado.web.MissingArgumentError:
-            return self.fail(400, 'Missing %s parameter.' % self.attr, 1234)
-
-        document = yield self.collection.find_one({'device': device})
-        if not document:
-            return self.fail(400, 'Unknown Device.', 1234)
-        _id = document['_id']
-        _ = yield self.collection.update({'_id': _id},
-                                              {'$set': {self.attr: val}})
-        return self.success('%s updated successfully.' % self.attr)
+        yield self.update_device_attrs(device, self.attrs)
+        self.success('%s updated successfully.' % ', '.join(self.attrs))
 
 
-class OTAVersionHandler(BaseOTAHandler):
+class VersionHandler(BaseHandler):
     """Get the latest version for a device."""
-    attr = 'version'
+    attrs = ['version']
 
 
-class OTAUrlHandler(JsonHandler):
+class UrlHandler(BaseHandler):
     """Get the url of the OTA for a device."""
-    attr = 'url'
+    attrs = ['url']
+
+
+class DeviceHandler(JsonHandler):
+
+    @gen.coroutine
+    def get(self, device):
+        pass
 
 
 app_router = [
-    (r'version/(?P<device>[a-zA-Z0-9_]+)/?$', OTAVersionHandler),
-    (r'url/(?P<device>[a-zA-Z0-9_]+)/?$', OTAUrlHandler)
+    (r'version/(?P<device>[a-zA-Z0-9_]+)/?$', VersionHandler),
+    (r'url/(?P<device>[a-zA-Z0-9_]+)/?$', UrlHandler)
 ]
