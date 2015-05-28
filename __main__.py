@@ -20,4 +20,4 @@ import sys
 
 from . import main
 
-main(sys.argv[1:])
+main(sys.argv)

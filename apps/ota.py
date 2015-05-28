@@ -60,7 +60,6 @@ class BaseHandler(JsonHandler):
         for i in range(len(attrs)):
             attr = attrs[i]
             val = vals[i]
-            print(attr)
             if not create and attr in document:
                 self.fail(400, 'Device already has a %s.' % attr, 1234)
             document[attr] = val
