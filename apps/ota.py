@@ -16,10 +16,10 @@ from __future__ import absolute_import
 
 from tornado import gen
 
-from ..utils.handlers import JsonHandler
+from ..utils.handlers import APIHandler
 
 
-class BaseHandler(JsonHandler):
+class BaseHandler(APIHandler):
     attrs = ['']
 
     def __init__(self, *args, **kwargs):
@@ -91,7 +91,7 @@ class UrlHandler(BaseHandler):
     attrs = ['url']
 
 
-class DeviceHandler(JsonHandler):
+class DeviceHandler(APIHandler):
 
     @gen.coroutine
     def get(self, device):

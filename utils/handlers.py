@@ -13,9 +13,30 @@
 # limitations under the License.
 
 from tornado.web import RequestHandler, Finish, MissingArgumentError
+from .encoders import SUPPORTED_ENCODERS
 
 
-class JsonHandler(RequestHandler):
+class APIHandler(RequestHandler):
+
+    def _encoder_factory(self):
+        format = self.get_argument('format', None)
+        if format is None:
+            format = self.request.headers.get('Accept', 'json').lower()
+            if format not in SUPPORTED_ENCODERS:
+                format = 'json'
+        return SUPPORTED_ENCODERS.get(format)
+
+    def write(self, chunk):
+        if self._finished:
+            raise RuntimeError("Cannot write() after finish()")
+
+        if isinstance(chunk, dict):
+            encoder = self._encoder_factory()
+            pretty = self.get_argument('pretty', False) in ('true', 'y', '1', 'pretty')
+            chunk = encoder['encoder'](chunk, pretty=pretty)
+            for header in encoder.get('headers', ()):
+                self.set_header(header[0], header[1])
+        super().write(chunk)
 
     def get_argument_or_bail(self, attr):
         try:
