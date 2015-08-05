@@ -19,12 +19,13 @@ from .encoders import SUPPORTED_ENCODERS
 class APIHandler(RequestHandler):
 
     def _encoder_factory(self):
-        format = self.get_argument('format', None)
-        if format is None:
-            format = self.request.headers.get('Accept', 'json').lower()
-            if format not in SUPPORTED_ENCODERS:
-                format = 'json'
-        return SUPPORTED_ENCODERS.get(format)
+        fmt = self.get_argument('format', None)
+        if fmt is None:
+            fmt = self.request.headers.get('Accept', 'json').lower()
+        fmt = fmt.split('/')[-1].lstrip('x-')
+        if fmt not in SUPPORTED_ENCODERS:
+            fmt = 'json'
+        return SUPPORTED_ENCODERS.get(fmt)
 
     def write(self, chunk):
         if self._finished:
