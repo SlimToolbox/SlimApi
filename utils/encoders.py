@@ -63,3 +63,21 @@ else:
             'encoder': yaml_encode
         }
     })
+
+
+try:
+    try:
+        import msgpack
+    except ImportError:
+        import umsgpack as msgpack
+except ImportError:
+    pass
+else:
+    def msgpack_encode(obj, pretty=False):
+        return msgpack.dumps(obj)
+    SUPPORTED_ENCODERS.update({
+        'msgpack': {
+            'headers': (("Content-Type", "application/msgpack; charset=UTF-8"),),
+            'encoder': msgpack_encode
+        }
+    })
